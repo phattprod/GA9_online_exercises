@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DIN 5008 – Übung</title>
+<style>
+body{font-family:system-ui,Arial,sans-serif;max-width:760px;margin:0 auto;padding:16px;color:#222;background:#fff}
+h1{font-size:1.5em;margin:.2em 0}h2{font-size:1.15em;margin:1.6em 0 .4em;border-bottom:2px solid #f5c400;padding-bottom:4px}
+.q{border:1px solid #ddd;border-radius:8px;padding:10px 12px;margin:10px 0}
+.q p{margin:0 0 6px;font-weight:600}.q label{display:block;padding:3px 0;cursor:pointer}
+.ok{background:#e6f6e6;border-color:#4caf50}.bad{background:#fdeaea;border-color:#e53935}
+.fb{font-size:.9em;margin-top:6px;color:#444}
+select{font-size:1em;padding:4px;margin:0 4px}
+button{font-size:1em;padding:8px 16px;margin:6px 6px 0 0;border:0;border-radius:6px;background:#1a73e8;color:#fff;cursor:pointer}
+button.sec{background:#777}#score{font-size:1.2em;font-weight:700;margin-top:12px}
+.rule{background:#fff8d6;border-left:4px solid #f5c400;padding:6px 10px;margin:8px 0;font-size:.95em}
+code{font-family:inherit;background:#f3f3f3;padding:0 3px}
+</style></head><body>
+<h1>Regeln gemäß DIN 5008 – Übung</h1>
+<p>Wähle jeweils die richtige Lösung und klicke unten auf <b>Prüfen</b>.</p>
+<div id="app"></div>
+<button onclick="check()">Prüfen</button><button class="sec" onclick="reset()">Neu starten</button>
+<div id="score"></div>
+<script>
+const parts=[
+{t:"Teil 1: Schreibweise wählen",rule:"Regeln 1–5, 7: Nach jedem Wort, nach Abkürzungen und nach Zahlen folgt ein Leerzeichen; Satzzeichen folgen ohne Leerzeichen.",
+ items:[
+ {q:"Welcher Satz ist richtig?",o:["Wir liefern in ca. 3 Wochen.","Wir liefern in ca.3 Wochen.","Wir liefern in ca . 3 Wochen."],a:0,f:"Nach Abkürzungen folgt nach dem Punkt ein Leerzeichen (Regel 5)."},
+ {q:"Welcher Satz ist richtig?",o:["Die Prüfung findet im Juli n.J. statt.","Die Prüfung findet im Juli n. J. statt.","Die Prüfung findet im Juli n. J . statt."],a:1,f:"n. J. = nächsten Jahres; zwischen den Abkürzungsteilen steht ein Leerzeichen (Regel 5)."},
+ {q:"Wie schließt ein Satz mit Abkürzung?",o:["Es gab Brötchen, Kuchen usw..","Es gab Brötchen, Kuchen usw.","Es gab Brötchen, Kuchen usw .."],a:1,f:"Der Abkürzungspunkt schließt den Satzschlusspunkt mit ein (Regel 5)."},
+ {q:"Welche Schreibweise ist richtig?",o:["Bitte melden Sie sich bis Freitag .","Bitte melden Sie sich bis Freitag.","Bitte melden Sie sich bis Freitag. "+"​"+"(zwei Leerzeichen davor)"],a:1,f:"Satzzeichen folgen dem Wort ohne Leerzeichen (Regel 2)."},
+ {q:"Welche Schreibweise ist richtig?",o:["Klasse 7a, Hausnummer 5b","Klasse 7 a, Hausnummer 5 b","Klasse 7-a, Hausnummer 5-b"],a:1,f:"Nach Zahlen folgt ein Leerzeichen (Regel 7)."},
+ {q:"Welche Schreibweise ist richtig?",o:["Am 3.März","Am 3. März","Am 3 . März"],a:1,f:"Bei Ordnungszahlen folgt das Leerzeichen erst nach dem Punkt (Regel 7)."},
+ {q:"Welche Schreibweise ist richtig?",o:["Er wurde 1.Platz.","Er belegte den 1 . Platz.","Er belegte den 1. Platz."],a:2,f:"Ordnungszahl: Punkt direkt an der Zahl, danach Leerzeichen (Regel 7)."},
+ {q:"Wie trennst du Absätze?",o:["Mit einer Leerzeile","Mit einem Leerzeichen","Gar nicht, der Text läuft durch"],a:0,f:"Absätze werden durch eine Leerzeile getrennt (Regel 3)."}
+]},
+{t:"Teil 2: Zahlen",rule:"Regel 8: Zahlen mit mehr als drei Stellen werden durch Leerzeichen in 3er-Gruppen gegliedert. Geldbeträge werden mit dem Punkt gegliedert.",
+ items:[
+ {q:"Wie schreibst du die Anzahl der Teilnehmer?",o:["3650 Teilnehmer","3 650 Teilnehmer","3.650 Teilnehmer"],a:1,f:"Normale Zahlen: Leerzeichen-Gruppen (Regel 8)."},
+ {q:"Wie schreibst du die Einwohnerzahl?",o:["10 500 Einwohner","10.500 Einwohner","10500 Einwohner"],a:0,f:"Keine Geldbeträge → Leerzeichen als Gliederung (Regel 8)."},
+ {q:"Wie schreibst du den Geldbetrag?",o:["1 250 EUR","1250 EUR","1.250 EUR"],a:2,f:"Geldbeträge werden aus Sicherheitsgründen mit dem Punkt gegliedert (Regel 8)."},
+ {q:"Wie schreibst du den Geldbetrag?",o:["1 000 000 €","1.000.000 €","1,000,000 €"],a:1,f:"Geldbeträge mit Punkt gliedern (Regel 8)."},
+ {q:"Welche Zahl braucht keine Gliederung?",o:["365 Tage","3650 Tage","10500 Tage"],a:0,f:"Gegliedert wird erst ab mehr als drei Stellen (Regel 8)."}
+]},
+{t:"Teil 3: Bindestrich bei Kopplungen",rule:"Regel 9: Kopplungen und Aneinanderreihungen von Wörtern und Zahlen werden mit Bindestrich/en geschrieben. Ausnahme: nicht vor Nachsilben.",
+ items:[
+ {q:"Welche Schreibweise ist richtig?",o:["3teilig","3-teilig","3 teilig"],a:1,f:"Zahl + Wort: Bindestrich (Regel 9)."},
+ {q:"Welche Schreibweise ist richtig?",o:["7 Tage Reise","7Tage-Reise","7-Tage-Reise"],a:2,f:"Aneinanderreihung: Bindestriche (Regel 9)."},
+ {q:"Welche Schreibweise ist richtig?",o:["3-km-Strecke","3 km Strecke","3km-Strecke"],a:0,f:"Regel 9."},
+ {q:"Welche Schreibweise ist richtig?",o:["5-€-Schein","5€ Schein","5 €-Schein"],a:0,f:"Regel 9."},
+ {q:"Ausnahme: Welche Schreibweise ist richtig?",o:["die 90-er Jahre","die 90er Jahre","die 90 er Jahre"],a:1,f:"Vor Nachsilben (90er, 60stel, 7%ig) steht kein Bindestrich (Regel 9, Ausnahme)."},
+ {q:"Welche Schreibweise ist richtig?",o:["ein 9-jähriges Kind","ein 9 jähriges Kind","ein 9jähriges Kind"],a:0,f:"Regel 9."}
+]},
+{t:"Teil 4: Welcher Strich ist es? (Regel 6)",rule:"Der Mittestrich: Wortrennungs-, Binde- und Ergänzungsstrich ohne Leerzeichen; Gedanken-, Strecken-, „gegen“- und „bis“-Strich mit Leerzeichen.",
+ dd:["Wortrennungsstrich","Bindestrich","Ergänzungsstrich","Gedankenstrich","Streckenstrich","Strich für „gegen“","Strich für „bis“"],
+ items:[
+ {q:"Kunden- bericht (Zeilenende)",a:0,f:"Silbentrennung am Zeilenende, ohne Leerzeichen."},
+ {q:"rot-weiß-blaues T-Shirt",a:1,f:"Bindestrich, ohne Leerzeichen."},
+ {q:"Vor- und Zuname",a:2,f:"Ergänzungsstrich, ohne Leerzeichen (bergauf und –ab)."},
+ {q:"Die Flasche – es war die letzte – ist leer.",a:3,f:"Gedankenstrich, mit Leerzeichen."},
+ {q:"Ulm – Augsburg – München",a:4,f:"Zeichen in Streckenangaben, mit Leerzeichen."},
+ {q:"FC Bayern – 1860 München",a:5,f:"„gegen“ beim Sport, mit Leerzeichen."},
+ {q:"Sprechstunde: 8 – 11 Uhr",a:6,f:"„bis“, mit Leerzeichen (nicht im Satz!)."}
+]}
+];
+const app=document.getElementById('app');let n=0;
+function build(){app.innerHTML='';n=0;
+parts.forEach((p,pi)=>{const h=document.createElement('h2');h.textContent=p.t;app.appendChild(h);
+ const r=document.createElement('div');r.className='rule';r.textContent=p.rule;app.appendChild(r);
+ p.items.forEach((it,i)=>{const d=document.createElement('div');d.className='q';d.dataset.a=it.a;d.dataset.f=it.f;
+  const id='q'+(n++);let h='<p>'+it.q+'</p>';
+  if(p.dd){h+='<select id="'+id+'"><option value="">– wählen –</option>'+p.dd.map((o,k)=>'<option value="'+k+'">'+o+'</option>').join('')+'</select>';}
+  else h+=it.o.map((o,k)=>'<label><input type="radio" name="'+id+'" value="'+k+'"> '+o+'</label>').join('');
+  h+='<div class="fb"></div>';d.innerHTML=h;d.dataset.id=id;d.dataset.dd=p.dd?1:0;app.appendChild(d);});});
+document.getElementById('score').textContent='';}
+function check(){let ok=0,tot=0;document.querySelectorAll('.q').forEach(d=>{tot++;
+ let v=d.dataset.dd==='1'?d.querySelector('select').value:(d.querySelector('input:checked')||{}).value;
+ const right=v!==undefined&&v!==''&&v===d.dataset.a;if(right)ok++;
+ d.className='q '+(right?'ok':'bad');d.querySelector('.fb').textContent=(right?'✓ Richtig. ':'✗ Leider falsch. ')+d.dataset.f;});
+ document.getElementById('score').textContent='Ergebnis: '+ok+' von '+tot+' richtig';}
+function reset(){build();window.scrollTo(0,0);}
+build();
+</script></body></html>
