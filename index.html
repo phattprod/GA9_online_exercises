@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Herrn Schönauers Online-Aufgaben</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+:root{
+  --bg:#F3EFE6; --ink:#1F2A44; --muted:#6B7385; --card:#FFFFFF; --line:#D8D2C4;
+  --it:#2E9D5B; --it-soft:#E3F3E9;
+  --e5:#2F7DE1; --e5-soft:#DCE9FB;
+  --e9:#F0592A; --e9-soft:#FDE3D8;
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --body:"Nunito","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45}
+.wrap{max-width:1000px;margin:0 auto;padding:32px 20px 48px}
+header{text-align:center;margin-bottom:28px}
+header h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,52px);margin:0 0 6px;text-wrap:balance}
+header p{margin:0;color:var(--muted);font-size:clamp(16px,2vw,19px)}
+nav{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:22px 0 8px}
+nav a{font:700 16px var(--body);text-decoration:none;color:#fff;border-radius:999px;padding:9px 18px;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+nav a:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+section{margin-top:34px;scroll-margin-top:16px}
+section h2{font-family:var(--display);font-weight:700;font-size:clamp(24px,3.4vw,34px);margin:0 0 14px;display:flex;align-items:center;gap:10px}
+section h2 .dot{width:14px;height:14px;border-radius:50%;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{display:flex;flex-direction:column;gap:6px;background:var(--card);border:3px solid var(--ink);border-radius:18px;padding:16px 18px;
+  text-decoration:none;color:var(--ink);box-shadow:0 5px 0 var(--ink);transition:transform .1s}
+.card:hover{transform:translateY(-2px)}
+.card:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
+.card:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.card .icon{font-size:34px;line-height:1}
+.card h3{font-family:var(--display);font-weight:600;font-size:22px;margin:2px 0 0}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.card .tag{align-self:flex-start;margin-top:auto;font:800 12px var(--body);letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:4px 10px}
+.it .dot,.it .tag{background:var(--it)} .it .tag{color:#fff} .it .card{background:linear-gradient(180deg,var(--it-soft),#fff 60%)}
+.e5 .dot,.e5 .tag{background:var(--e5)} .e5 .tag{color:#fff} .e5 .card{background:linear-gradient(180deg,var(--e5-soft),#fff 60%)}
+.e9 .dot,.e9 .tag{background:var(--e9)} .e9 .tag{color:#fff} .e9 .card{background:linear-gradient(180deg,var(--e9-soft),#fff 60%)}
+footer{margin-top:44px;text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>👋 Willkommen bei Herrn Schönauers Online-Aufgaben</h1>
+    <p>Wähle dein Fach und deine Klasse – dann geht's los!</p>
+    <nav>
+      <a href="#it7" style="background:var(--it)">💻 IT 7</a>
+      <a href="#e5" style="background:var(--e5)">🇬🇧 Englisch 5</a>
+      <a href="#e9" style="background:var(--e9)">🇬🇧 Englisch 9</a>
+    </nav>
+  </header>
+
+  <section id="it7" class="it">
+    <h2><span class="dot"></span>IT 7</h2>
+    <div class="grid">
+      <a class="card" href="IT7_Uebungen_15-17_Teams.docx" download>
+        <span class="icon">⌨️</span>
+        <h3>Tastschreiben: Übungen 15–17</h3>
+        <p>Abschreibübungen mit geschütztem Leerzeichen und Abkürzungen.</p>
+        <span class="tag">Word-Datei · Download</span>
+      </a>
+    </div>
+  </section>
+
+  <section id="e5" class="e5">
+    <h2><span class="dot"></span>Englisch 5</h2>
+    <div class="grid">
+      <a class="card" href="E5_GA5U2_Clock-Race.html">
+        <span class="icon">⏰</span>
+        <h3>Clock Race</h3>
+        <p>What time is it? Lies die Uhr und tippe die richtige Uhrzeit an.</p>
+        <span class="tag">Spiel · 2 Teams</span>
+      </a>
+      <a class="card" href="E5Question-Builder.html">
+        <span class="icon">🧩</span>
+        <h3>Question Builder</h3>
+        <p>Bilde Fragen mit <i>am / is / are</i> aus durcheinandergewürfelten Wörtern.</p>
+        <span class="tag">Spiel · 2 Teams</span>
+      </a>
+    </div>
+  </section>
+
+  <section id="e9" class="e9">
+    <h2><span class="dot"></span>Englisch 9</h2>
+    <div class="grid">
+      <a class="card" href="E9_vocabulary_Sport-Words-Race.html">
+        <span class="icon">🏅</span>
+        <h3>Sport Words Race</h3>
+        <p>Collocations, synonyms, antonyms und idioms rund um Sport.</p>
+        <span class="tag">Spiel · 2 Teams</span>
+      </a>
+    </div>
+  </section>
+
+  <footer>Herr Schönauer · Realschule</footer>
+</div>
+</body>
+</html>

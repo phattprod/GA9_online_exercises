@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clock Race</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: full-screen split arena, one half per team; clock on top, answers fall below. Deliberate single bright look for classroom boards. */
+:root{
+  --bg:#F3EFE6; --ink:#1F2A44; --muted:#6B7385;
+  --teamA:#2F7DE1; --teamA-soft:#DCE9FB;
+  --teamB:#F0592A; --teamB-soft:#FDE3D8;
+  --good:#2E9D5B; --bad:#D63A3A; --card:#FFFFFF; --line:#D8D2C4;
+  --display:"Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Nunito", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+.app{height:100%;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  font-family:var(--display);font-weight:600}
+.topbar .round{font-size:clamp(14px,2vw,20px);color:var(--muted)}
+.topbar .brand{font-size:clamp(16px,2.4vw,26px)}
+.iconbtn{font:600 14px var(--body);border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.iconbtn:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.arena{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0}
+.side{position:relative;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.side.a{background:linear-gradient(180deg,var(--teamA-soft),var(--bg) 70%);border-right:3px dashed var(--line)}
+.side.b{background:linear-gradient(180deg,var(--teamB-soft),var(--bg) 70%)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:6px 16px}
+.team{font-family:var(--display);font-weight:700;font-size:clamp(18px,2.6vw,30px)}
+.a .team{color:var(--teamA)} .b .team{color:var(--teamB)}
+.score{font-family:var(--display);font-weight:700;font-size:clamp(22px,3.4vw,40px);font-variant-numeric:tabular-nums;min-width:3ch;text-align:right}
+.clockwrap{display:flex;justify-content:center;align-items:center;padding:2px 0 4px}
+.clockwrap svg{height:clamp(120px,26vh,260px);width:auto}
+.field{position:relative;flex:1;min-height:0;overflow:hidden;border-top:2px solid var(--line)}
+.ground{position:absolute;left:0;right:0;bottom:0;height:10px;background:repeating-linear-gradient(90deg,var(--line) 0 14px,transparent 14px 28px);opacity:.8}
+.opt{position:absolute;width:46%;padding:clamp(8px,1.4vh,14px) 10px;border-radius:16px;background:var(--card);
+  border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);font-family:var(--display);font-weight:600;
+  font-size:clamp(15px,2.1vw,26px);line-height:1.15;text-align:center;cursor:pointer;will-change:transform;touch-action:none}
+.opt.wrong{background:var(--bad);color:#fff;border-color:var(--bad);box-shadow:none;opacity:.85;pointer-events:none}
+.opt.right{background:var(--good);color:#fff;border-color:var(--good);box-shadow:none}
+.opt.reveal{outline:4px dashed var(--good);outline-offset:3px}
+.flash{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s}
+.flash.good{background:radial-gradient(circle at 50% 60%,rgba(46,157,91,.35),transparent 60%);opacity:1}
+.flash.bad{background:radial-gradient(circle at 50% 60%,rgba(214,58,58,.28),transparent 60%);opacity:1}
+.pop{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:700;
+  font-size:clamp(26px,4vw,48px);pointer-events:none;opacity:0;transition:opacity .2s, transform .6s}
+.pop.show{opacity:1;transform:translate(-50%,-90%)}
+.done{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-family:var(--display);font-weight:600;font-size:clamp(14px,1.8vw,20px);color:var(--muted)}
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(31,42,68,.55);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.panel{background:var(--card);border-radius:24px;max-width:760px;width:100%;padding:24px clamp(18px,3vw,36px);box-shadow:0 10px 0 rgba(0,0,0,.15);max-height:92vh;overflow:auto}
+.panel h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,52px);margin:0 0 4px;text-wrap:balance}
+.panel p{margin:4px 0 12px;color:var(--muted);font-size:16px;line-height:1.45}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+.row label.lab{font-weight:800;min-width:130px;font-size:15px;letter-spacing:.02em}
+.chip{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;font:700 15px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.names input{font:700 16px var(--body);padding:10px 12px;border-radius:12px;border:2px solid var(--line);min-width:0;background:#fff;color:var(--ink)}
+#nameA{border-color:var(--teamA)} #nameB{border-color:var(--teamB)}
+.btn{font-family:var(--display);font-weight:700;font-size:24px;border:none;border-radius:18px;padding:14px 28px;background:var(--ink);color:#fff;cursor:pointer;box-shadow:0 5px 0 #0c1326}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c1326}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.rules div{background:var(--bg);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.35}
+.rules b{display:block;font-family:var(--display);font-size:20px}
+.final{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.final div{border-radius:16px;padding:14px;text-align:center}
+.final .fa{background:var(--teamA-soft)} .final .fb{background:var(--teamB-soft)}
+.final b{display:block;font-family:var(--display);font-size:44px}
+.winner{font-family:var(--display);font-weight:700;font-size:clamp(24px,4vw,40px)}
+@media (max-width:640px){.rules{grid-template-columns:1fr}.opt{width:92%}}
+@media (prefers-reduced-motion: reduce){.pop{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">⏰ Clock Race</div>
+    <div class="round" id="roundInfo">What time is it?</div>
+    <div style="display:flex;gap:8px">
+      <button class="iconbtn" id="fsBtn" type="button">Vollbild</button>
+      <button class="iconbtn" id="menuBtn" type="button">Menü</button>
+    </div>
+  </div>
+  <div class="arena">
+    <section class="side a" id="sideA">
+      <div class="head"><div class="team" id="teamAName">Team A</div><div class="score" id="scoreA">0</div></div>
+      <div class="clockwrap" id="clockA"></div>
+      <div class="field" id="fieldA"><div class="ground"></div><div class="flash"></div><div class="pop"></div><div class="done" hidden></div></div>
+    </section>
+    <section class="side b" id="sideB">
+      <div class="head"><div class="team" id="teamBName">Team B</div><div class="score" id="scoreB">0</div></div>
+      <div class="clockwrap" id="clockB"></div>
+      <div class="field" id="fieldB"><div class="ground"></div><div class="flash"></div><div class="pop"></div><div class="done" hidden></div></div>
+    </section>
+  </div>
+</div>
+
+<div class="overlay" id="startOv">
+  <div class="panel">
+    <h1>Clock Race</h1>
+    <p>Two teams, one board. Read the clock and tap the right time before it hits the ground.</p>
+    <div class="rules">
+      <div><b>+100</b>for the right answer</div>
+      <div><b>+0 … 100</b>speed bonus – the faster, the more</div>
+      <div><b>−30</b>for every wrong tap</div>
+    </div>
+    <div class="row"><label class="lab">Teams</label>
+      <div class="names"><input id="nameA" value="Team Blue" maxlength="16" aria-label="Name Team links"><input id="nameB" value="Team Orange" maxlength="16" aria-label="Name Team rechts"></div></div>
+    <div class="row" role="group" aria-label="Level"><label class="lab">Level</label>
+      <button class="chip" data-g="level" data-v="1" type="button">1 · o'clock, quarter, half</button>
+      <button class="chip" data-g="level" data-v="2" type="button" aria-pressed="true">2 · five minutes</button>
+      <button class="chip" data-g="level" data-v="3" type="button">3 · all minutes</button></div>
+    <div class="row" role="group" aria-label="Runden"><label class="lab">Rounds</label>
+      <button class="chip" data-g="rounds" data-v="10" type="button">10</button>
+      <button class="chip" data-g="rounds" data-v="15" type="button" aria-pressed="true">15</button>
+      <button class="chip" data-g="rounds" data-v="20" type="button">20</button></div>
+    <div class="row" role="group" aria-label="Tempo"><label class="lab">Speed</label>
+      <button class="chip" data-g="speed" data-v="13" type="button">slow</button>
+      <button class="chip" data-g="speed" data-v="9" type="button" aria-pressed="true">medium</button>
+      <button class="chip" data-g="speed" data-v="6" type="button">fast</button></div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" id="startBtn" type="button">Start ▶</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="endOv" hidden>
+  <div class="panel" style="text-align:center">
+    <h1>Time's up!</h1>
+    <div class="winner" id="winner"></div>
+    <div class="final"><div class="fa"><span id="fNameA"></span><b id="fScoreA">0</b><span id="fStatA"></span></div>
+      <div class="fb"><span id="fNameB"></span><b id="fScoreB">0</b><span id="fStatB"></span></div></div>
+    <div class="row" style="justify-content:center"><button class="btn" id="againBtn" type="button">Play again</button>
+      <button class="iconbtn" id="settingsBtn" type="button">Einstellungen</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const NUM = ["zero","one","two","three","four","five","six","seven","eight","nine","ten","eleven","twelve","thirteen","fourteen","fifteen","sixteen","seventeen","eighteen","nineteen","twenty"];
+const num = n => n <= 20 ? NUM[n] : (n < 30 ? "twenty-" + NUM[n - 20] : "?");
+const hr = h => NUM[((h - 1) % 12 + 12) % 12 + 1];
+function say(h, m){ // h 1..12, m 0..59
+  if (m === 0) return `${hr(h)} o'clock`;
+  if (m === 15) return `quarter past ${hr(h)}`;
+  if (m === 30) return `half past ${hr(h)}`;
+  if (m === 45) return `quarter to ${hr(h + 1)}`;
+  if (m < 30) return `${num(m)}${m % 5 ? " minutes" : ""} past ${hr(h)}`;
+  const r = 60 - m; return `${num(r)}${r % 5 ? " minutes" : ""} to ${hr(h + 1)}`;
+}
+const cap = s => s; // keep lowercase like a spoken phrase
+function distractors(h, m){
+  const pool = new Set();
+  const add = (hh, mm) => pool.add(say(((hh - 1) % 12 + 12) % 12 + 1, mm));
+  add(h + 1, m); add(h - 1, m);                // wrong hour
+  if (m > 0 && m < 60) add(h, 60 - m);          // past/to mirrored
+  if (m > 30) add(h + 1, 60 - m);               // "twenty past five" for 4:40
+  if (m < 30 && m > 0) add(h - 1, 60 - m);      // "ten to two" for 2:10 type swap
+  if (m === 30) { add(h + 1, 30); add(h - 1, 30); }  // halb-Falle
+  if (m === 0) { add(h, 30); add(h - 1, 30); }
+  if (m === 15) { add(h + 1, 45); add(h, 45); }
+  if (m === 45) { add(h, 15); add(h, 45 - 30); }
+  // wrong minutes nearby
+  const near = [5, 10, -5, -10].map(d => m + d).filter(x => x > 0 && x < 60);
+  near.forEach(x => add(h, x));
+  const correct = say(h, m); pool.delete(correct);
+  return shuffle([...pool]).slice(0, 3);
+}
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function randTime(level){
+  const h = 1 + Math.floor(Math.random() * 12);
+  let m;
+  if (level === 1) m = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+  else if (level === 2) m = 5 * Math.floor(Math.random() * 12);
+  else m = Math.random() < .55 ? 5 * Math.floor(Math.random() * 12) : Math.floor(Math.random() * 60);
+  return [h, m];
+}
+function clockSVG(h, m, accent){
+  const c = 110, R = 100; let s = `<svg viewBox="0 0 220 220" role="img" aria-label="clock"><circle cx="${c}" cy="${c}" r="${R}" fill="#fff" stroke="#1F2A44" stroke-width="7"/>`;
+  for (let k = 0; k < 60; k++){ const a = (k * 6 - 90) * Math.PI / 180, l = k % 5 ? 5 : 12, w = k % 5 ? 1.6 : 4;
+    s += `<line x1="${c + (R - 3 - l) * Math.cos(a)}" y1="${c + (R - 3 - l) * Math.sin(a)}" x2="${c + (R - 4) * Math.cos(a)}" y2="${c + (R - 4) * Math.sin(a)}" stroke="#1F2A44" stroke-width="${w}" stroke-linecap="round"/>`; }
+  for (let n = 1; n <= 12; n++){ const a = (n * 30 - 90) * Math.PI / 180;
+    s += `<text x="${c + (R - 30) * Math.cos(a)}" y="${c + (R - 30) * Math.sin(a) + 7}" text-anchor="middle" font-family="Fredoka, Trebuchet MS, sans-serif" font-weight="600" font-size="20" fill="#1F2A44">${n}</text>`; }
+  const am = (m * 6 - 90) * Math.PI / 180, ah = (((h % 12) + m / 60) * 30 - 90) * Math.PI / 180;
+  s += `<line x1="${c}" y1="${c}" x2="${c + 52 * Math.cos(ah)}" y2="${c + 52 * Math.sin(ah)}" stroke="#1F2A44" stroke-width="10" stroke-linecap="round"/>`;
+  s += `<line x1="${c}" y1="${c}" x2="${c + 80 * Math.cos(am)}" y2="${c + 80 * Math.sin(am)}" stroke="${accent}" stroke-width="6" stroke-linecap="round"/>`;
+  s += `<circle cx="${c}" cy="${c}" r="8" fill="${accent}" stroke="#1F2A44" stroke-width="3"/></svg>`; return s;
+}
+// ---- audio
+let actx = null;
+function beep(ok){ try{ actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  const o = actx.createOscillator(), g = actx.createGain(); o.type = ok ? "triangle" : "square";
+  o.frequency.setValueAtTime(ok ? 660 : 180, actx.currentTime); if (ok) o.frequency.linearRampToValueAtTime(990, actx.currentTime + .15);
+  g.gain.setValueAtTime(.12, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .3);
+  o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + .32);}catch(e){} }
+
+// ---- settings
+const cfg = { level: 2, rounds: 15, speed: 9 };
+document.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(`.chip[data-g="${b.dataset.g}"]`).forEach(x => x.setAttribute("aria-pressed", "false"));
+  b.setAttribute("aria-pressed", "true"); cfg[b.dataset.g] = +b.dataset.v; }));
+try{ const s = JSON.parse(localStorage.getItem("clockrace") || "null"); if (s){ $("#nameA").value = s.a || $("#nameA").value; $("#nameB").value = s.b || $("#nameB").value; } }catch(e){}
+
+// ---- game state
+const sides = { A: { field: $("#fieldA"), clock: $("#clockA"), scoreEl: $("#scoreA"), color: "#2F7DE1" },
+                B: { field: $("#fieldB"), clock: $("#clockB"), scoreEl: $("#scoreB"), color: "#F0592A" } };
+let round = 0, running = false, raf = 0, current = null;
+function resetSide(S){ S.score = 0; S.right = 0; S.wrong = 0; S.scoreEl.textContent = "0"; }
+function startGame(){
+  const a = $("#nameA").value.trim() || "Team A", b = $("#nameB").value.trim() || "Team B";
+  try{ localStorage.setItem("clockrace", JSON.stringify({ a, b })); }catch(e){}
+  $("#teamAName").textContent = a; $("#teamBName").textContent = b; sides.A.name = a; sides.B.name = b;
+  resetSide(sides.A); resetSide(sides.B); round = 0;
+  $("#startOv").hidden = true; $("#endOv").hidden = true; running = true; nextRound();
+}
+function nextRound(){
+  round++;
+  if (round > cfg.rounds) return endGame();
+  $("#roundInfo").textContent = `Round ${round} / ${cfg.rounds}`;
+  const [h, m] = randTime(cfg.level); const correct = say(h, m); const opts = [correct, ...distractors(h, m)];
+  current = { h, m, correct, t0: performance.now() };
+  for (const k of ["A", "B"]) setupSide(sides[k], h, m, shuffle(opts.slice()), correct);
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(tick);
+}
+function setupSide(S, h, m, opts, correct){
+  S.clock.innerHTML = clockSVG(h, m, S.color);
+  S.field.querySelectorAll(".opt").forEach(e => e.remove());
+  S.field.querySelector(".done").hidden = true;
+  S.finished = false; S.items = [];
+  const lanesX = [2, 52], offsets = [0, .2, .45, .65];
+  opts.forEach((txt, i) => {
+    const el = document.createElement("button"); el.type = "button"; el.className = "opt"; el.textContent = cap(txt);
+    el.style.left = (opts.length > 2 && window.innerWidth > 640 ? lanesX[i % 2] : 4) + "%";
+    S.field.appendChild(el);
+    const it = { el, txt, ok: txt === correct, start: -offsets[i], alive: true };
+    el.addEventListener("pointerdown", ev => { ev.preventDefault(); hit(S, it); });
+    S.items.push(it);
+  });
+}
+function hit(S, it){
+  if (!running || S.finished || !it.alive) return;
+  if (it.ok){
+    const frac = Math.min(1, Math.max(0, 1 - it.progress)); const pts = 100 + Math.round(100 * frac);
+    S.score += pts; S.right++; it.el.classList.add("right"); showPop(S, "+" + pts, "var(--good)"); flash(S, "good"); beep(true);
+    finishSide(S);
+  } else {
+    S.score -= 30; S.wrong++; it.alive = false; it.el.classList.add("wrong"); showPop(S, "−30", "var(--bad)"); flash(S, "bad"); beep(false);
+    setTimeout(() => it.el.remove(), 400);
+  }
+  S.scoreEl.textContent = S.score;
+}
+function finishSide(S){
+  S.finished = true;
+  S.items.forEach(i => { if (i.ok) i.el.classList.add("reveal"); else if (i.alive) i.el.style.opacity = .35; });
+  const d = S.field.querySelector(".done"); d.hidden = false; d.textContent = "Waiting for the other team …";
+  if (sides.A.finished && sides.B.finished) { setTimeout(nextRound, 1400); }
+}
+function showPop(S, txt, col){ const p = S.field.querySelector(".pop"); p.textContent = txt; p.style.color = col; p.classList.remove("show"); void p.offsetWidth; p.classList.add("show"); setTimeout(() => p.classList.remove("show"), 700); }
+function flash(S, cls){ const f = S.field.querySelector(".flash"); f.className = "flash " + cls; setTimeout(() => f.className = "flash", 300); }
+function tick(now){
+  if (!running) return;
+  const dur = cfg.speed * 1000;
+  for (const k of ["A", "B"]){
+    const S = sides[k]; if (S.finished) continue;
+    const H = S.field.clientHeight; let anyLeft = false;
+    for (const it of S.items){
+      if (!it.alive) continue;
+      const p = (now - current.t0) / dur + it.start; it.progress = p;
+      const elH = it.el.offsetHeight; const y = -elH + p * (H - 10);
+      it.el.style.transform = `translateY(${y}px)`;
+      if (y > H - 10) { // landed
+        it.alive = false; it.el.style.opacity = .25;
+        if (it.ok) { S.finished = true; showPop(S, "too late!", "var(--bad)"); it.el.classList.add("reveal");
+          it.el.style.opacity = 1; it.el.style.transform = `translateY(${H - elH - 14}px)`;
+          const d = S.field.querySelector(".done"); d.hidden = false; d.textContent = "Missed – waiting for the other team …";
+          if (sides.A.finished && sides.B.finished) setTimeout(nextRound, 1600); }
+      } else anyLeft = true;
+    }
+  }
+  raf = requestAnimationFrame(tick);
+}
+function endGame(){
+  running = false; cancelAnimationFrame(raf);
+  const A = sides.A, B = sides.B;
+  $("#fNameA").textContent = A.name; $("#fNameB").textContent = B.name;
+  $("#fScoreA").textContent = A.score; $("#fScoreB").textContent = B.score;
+  $("#fStatA").textContent = `${A.right} right · ${A.wrong} wrong taps`; $("#fStatB").textContent = `${B.right} right · ${B.wrong} wrong taps`;
+  $("#winner").textContent = A.score === B.score ? "It's a draw!" : `${A.score > B.score ? A.name : B.name} wins! 🏆`;
+  $("#roundInfo").textContent = "Game over"; $("#endOv").hidden = false;
+}
+$("#startBtn").addEventListener("click", () => { beep(true); startGame(); });
+$("#againBtn").addEventListener("click", startGame);
+$("#settingsBtn").addEventListener("click", () => { $("#endOv").hidden = true; $("#startOv").hidden = false; });
+$("#menuBtn").addEventListener("click", () => { running = false; cancelAnimationFrame(raf); $("#endOv").hidden = true; $("#startOv").hidden = false; });
+$("#fsBtn").addEventListener("click", () => { const d = document.documentElement; try{ (document.fullscreenElement ? document.exitFullscreen() : d.requestFullscreen()).catch(() => {}); }catch(e){} });
+// sample clocks on the start screen background
+const [h0, m0] = [4, 40]; sides.A.clock.innerHTML = clockSVG(h0, m0, sides.A.color); sides.B.clock.innerHTML = clockSVG(h0, m0, sides.B.color);
+})();
+</script>
+
+</body>
+</html>

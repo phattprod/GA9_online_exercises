@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Question Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: full-screen split arena, one half per team; clock on top, answers fall below. Deliberate single bright look for classroom boards. */
+:root{
+  --bg:#F3EFE6; --ink:#1F2A44; --muted:#6B7385;
+  --teamA:#2F7DE1; --teamA-soft:#DCE9FB;
+  --teamB:#F0592A; --teamB-soft:#FDE3D8;
+  --good:#2E9D5B; --bad:#D63A3A; --card:#FFFFFF; --line:#D8D2C4;
+  --display:"Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Nunito", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px));
+  -webkit-user-select:none;user-select:none;touch-action:manipulation}
+.app{height:100%;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  font-family:var(--display);font-weight:600}
+.topbar .round{font-size:clamp(14px,2vw,20px);color:var(--muted)}
+.topbar .brand{font-size:clamp(16px,2.4vw,26px)}
+.iconbtn{font:600 14px var(--body);border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 14px;cursor:pointer}
+.iconbtn:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.arena{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:0}
+.side{position:relative;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.side.a{background:linear-gradient(180deg,var(--teamA-soft),var(--bg) 70%);border-right:3px dashed var(--line)}
+.side.b{background:linear-gradient(180deg,var(--teamB-soft),var(--bg) 70%)}
+.head{display:flex;align-items:center;justify-content:space-between;padding:6px 16px}
+.team{font-family:var(--display);font-weight:700;font-size:clamp(18px,2.6vw,30px)}
+.a .team{color:var(--teamA)} .b .team{color:var(--teamB)}
+.score{font-family:var(--display);font-weight:700;font-size:clamp(22px,3.4vw,40px);font-variant-numeric:tabular-nums;min-width:3ch;text-align:right}
+.clockwrap{display:flex;justify-content:center;align-items:center;padding:2px 0 4px}
+.clockwrap svg{height:clamp(120px,26vh,260px);width:auto}
+.field{position:relative;flex:1;min-height:0;overflow:hidden;border-top:2px solid var(--line)}
+.ground{position:absolute;left:0;right:0;bottom:0;height:10px;background:repeating-linear-gradient(90deg,var(--line) 0 14px,transparent 14px 28px);opacity:.8}
+.opt{position:absolute;width:46%;padding:clamp(8px,1.4vh,14px) 10px;border-radius:16px;background:var(--card);
+  border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);font-family:var(--display);font-weight:600;
+  font-size:clamp(15px,2.1vw,26px);line-height:1.15;text-align:center;cursor:pointer;will-change:transform;touch-action:none}
+.opt.wrong{background:var(--bad);color:#fff;border-color:var(--bad);box-shadow:none;opacity:.85;pointer-events:none}
+.opt.right{background:var(--good);color:#fff;border-color:var(--good);box-shadow:none}
+.opt.reveal{outline:4px dashed var(--good);outline-offset:3px}
+.flash{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s}
+.flash.good{background:radial-gradient(circle at 50% 60%,rgba(46,157,91,.35),transparent 60%);opacity:1}
+.flash.bad{background:radial-gradient(circle at 50% 60%,rgba(214,58,58,.28),transparent 60%);opacity:1}
+.pop{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:700;
+  font-size:clamp(26px,4vw,48px);pointer-events:none;opacity:0;transition:opacity .2s, transform .6s}
+.pop.show{opacity:1;transform:translate(-50%,-90%)}
+.done{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-family:var(--display);font-weight:600;font-size:clamp(14px,1.8vw,20px);color:var(--muted)}
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(31,42,68,.55);display:flex;align-items:center;justify-content:center;z-index:20;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px))}
+.panel{background:var(--card);border-radius:24px;max-width:760px;width:100%;padding:24px clamp(18px,3vw,36px);box-shadow:0 10px 0 rgba(0,0,0,.15);max-height:92vh;overflow:auto}
+.panel h1{font-family:var(--display);font-weight:700;font-size:clamp(30px,5vw,52px);margin:0 0 4px;text-wrap:balance}
+.panel p{margin:4px 0 12px;color:var(--muted);font-size:16px;line-height:1.45}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+.row label.lab{font-weight:800;min-width:130px;font-size:15px;letter-spacing:.02em}
+.chip{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;font:700 15px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.names input{font:700 16px var(--body);padding:10px 12px;border-radius:12px;border:2px solid var(--line);min-width:0;background:#fff;color:var(--ink)}
+#nameA{border-color:var(--teamA)} #nameB{border-color:var(--teamB)}
+.btn{font-family:var(--display);font-weight:700;font-size:24px;border:none;border-radius:18px;padding:14px 28px;background:var(--ink);color:#fff;cursor:pointer;box-shadow:0 5px 0 #0c1326}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0c1326}
+.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.rules div{background:var(--bg);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.35}
+.rules b{display:block;font-family:var(--display);font-size:20px}
+.final{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.final div{border-radius:16px;padding:14px;text-align:center}
+.final .fa{background:var(--teamA-soft)} .final .fb{background:var(--teamB-soft)}
+.final b{display:block;font-family:var(--display);font-size:44px}
+.winner{font-family:var(--display);font-weight:700;font-size:clamp(24px,4vw,40px)}
+@media (max-width:640px){.rules{grid-template-columns:1fr}.opt{width:92%}}
+@media (prefers-reduced-motion: reduce){.pop{transition:none}}
+
+.board{flex:1;display:flex;flex-direction:column;gap:10px;padding:6px 16px 14px;min-height:0}
+.de{font-size:clamp(14px,1.6vw,20px);color:var(--muted);text-align:center;min-height:1.3em}
+.line{min-height:clamp(64px,10vh,96px);border-radius:16px;border:3px dashed var(--line);background:rgba(255,255,255,.7);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px;transition:background .2s,border-color .2s}
+.line.ok{border-color:var(--good);background:#E6F5EC}
+.line.bad{border-color:var(--bad);background:#FBE3E3;animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pool{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-content:flex-start;flex:1;padding-top:6px}
+.w{font-family:var(--display);font-weight:600;font-size:clamp(18px,2.6vw,34px);padding:clamp(6px,1.2vh,12px) clamp(12px,1.4vw,20px);border-radius:14px;border:3px solid var(--ink);background:var(--card);color:var(--ink);box-shadow:0 4px 0 var(--ink);cursor:pointer;touch-action:manipulation}
+.w:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.a .line .w{border-color:var(--teamA);box-shadow:0 4px 0 var(--teamA)}
+.b .line .w{border-color:var(--teamB);box-shadow:0 4px 0 var(--teamB)}
+.timer{height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.timer i{display:block;height:100%;width:100%;background:var(--ink);transform-origin:left;transition:transform .2s linear}
+.status{text-align:center;font-family:var(--display);font-weight:600;font-size:clamp(15px,1.8vw,22px);min-height:1.4em}
+.sol{font-family:var(--display);font-weight:600;color:var(--good)}
+.pop{top:62%}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">🧩 Question Builder</div>
+    <div class="round" id="roundInfo">Build the question!</div>
+    <div style="display:flex;gap:8px"><button class="iconbtn" id="fsBtn" type="button">Vollbild</button><button class="iconbtn" id="menuBtn" type="button">Menü</button></div>
+  </div>
+  <div class="arena">
+    <section class="side a" id="sideA"><div class="head"><div class="team" id="teamAName">Team A</div><div class="score" id="scoreA">0</div></div>
+      <div class="board"><div class="timer"><i id="timerA"></i></div><div class="de" id="deA"></div><div class="line" id="lineA"></div><div class="status" id="stA"></div><div class="pool" id="poolA"></div></div><div class="pop" id="popA"></div></section>
+    <section class="side b" id="sideB"><div class="head"><div class="team" id="teamBName">Team B</div><div class="score" id="scoreB">0</div></div>
+      <div class="board"><div class="timer"><i id="timerB"></i></div><div class="de" id="deB"></div><div class="line" id="lineB"></div><div class="status" id="stB"></div><div class="pool" id="poolB"></div></div><div class="pop" id="popB"></div></section>
+  </div>
+</div>
+<div class="overlay" id="startOv"><div class="panel">
+  <h1>Question Builder</h1>
+  <p>Two teams, the same mixed-up words. Tap the words in the right order and build the question with <b>am / is / are</b>. Tap a word in your line to take it back.</p>
+  <div class="rules"><div><b>+100</b>for the right question</div><div><b>+0 … 100</b>time bonus – the faster, the more</div><div><b>−20</b>for a wrong question (try again!)</div></div>
+  <div class="row"><label class="lab">Teams</label><div class="names"><input id="nameA" value="Team Blue" maxlength="16" aria-label="Name Team links"><input id="nameB" value="Team Orange" maxlength="16" aria-label="Name Team rechts"></div></div>
+  <div class="row" role="group"><label class="lab">Questions</label>
+    <button class="chip" data-g="type" data-v="yn" type="button">yes/no questions</button>
+    <button class="chip" data-g="type" data-v="wh" type="button">question words</button>
+    <button class="chip" data-g="type" data-v="mix" type="button" aria-pressed="true">mixed</button></div>
+  <div class="row" role="group"><label class="lab">Level</label>
+    <button class="chip" data-g="level" data-v="1" type="button" aria-pressed="true">easy</button>
+    <button class="chip" data-g="level" data-v="2" type="button">+ one extra word</button></div>
+  <div class="row" role="group"><label class="lab">German help</label>
+    <button class="chip" data-g="de" data-v="1" type="button" aria-pressed="true">on</button>
+    <button class="chip" data-g="de" data-v="0" type="button">off</button></div>
+  <div class="row" role="group"><label class="lab">Rounds</label>
+    <button class="chip" data-g="rounds" data-v="8" type="button">8</button><button class="chip" data-g="rounds" data-v="12" type="button" aria-pressed="true">12</button><button class="chip" data-g="rounds" data-v="20" type="button">20</button></div>
+  <div class="row" role="group"><label class="lab">Time</label>
+    <button class="chip" data-g="time" data-v="60" type="button">60 s</button><button class="chip" data-g="time" data-v="40" type="button" aria-pressed="true">40 s</button><button class="chip" data-g="time" data-v="25" type="button">25 s</button></div>
+  <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn" id="startBtn" type="button">Start ▶</button></div>
+</div></div>
+<div class="overlay" id="endOv" hidden><div class="panel" style="text-align:center">
+  <h1>Well done!</h1><div class="winner" id="winner"></div>
+  <div class="final"><div class="fa"><span id="fNameA"></span><b id="fScoreA">0</b><span id="fStatA"></span></div><div class="fb"><span id="fNameB"></span><b id="fScoreB">0</b><span id="fStatB"></span></div></div>
+  <div class="row" style="justify-content:center"><button class="btn" id="againBtn" type="button">Play again</button><button class="iconbtn" id="settingsBtn" type="button">Einstellungen</button></div>
+</div></div>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+// [type, question, German, extra (wrong) word]
+const BANK = [
+ ["yn","Are you from Germany?","Kommst du aus Deutschland?","Is"],
+ ["yn","Is your sister ten?","Ist deine Schwester zehn?","are"],
+ ["yn","Is the cat in the garden?","Ist die Katze im Garten?","are"],
+ ["yn","Are your friends at school?","Sind deine Freunde in der Schule?","is"],
+ ["yn","Is it your birthday today?","Hast du heute Geburtstag?","are"],
+ ["yn","Am I late?","Bin ich zu spät?","Is"],
+ ["yn","Are you twelve?","Bist du zwölf?","Is"],
+ ["yn","Is your teacher nice?","Ist dein Lehrer / deine Lehrerin nett?","are"],
+ ["yn","Is Tom your brother?","Ist Tom dein Bruder?","Are"],
+ ["yn","Are the books on the table?","Sind die Bücher auf dem Tisch?","Is"],
+ ["yn","Is your dog black?","Ist dein Hund schwarz?","Are"],
+ ["yn","Are we in room five?","Sind wir in Raum fünf?","Is"],
+ ["wh","What is your name?","Wie heißt du?","are"],
+ ["wh","Where are you from?","Woher kommst du?","is"],
+ ["wh","How old are you?","Wie alt bist du?","is"],
+ ["wh","Who is your best friend?","Wer ist dein bester Freund / deine beste Freundin?","are"],
+ ["wh","What colour is your bag?","Welche Farbe hat deine Tasche?","are"],
+ ["wh","Where is my pen?","Wo ist mein Stift?","are"],
+ ["wh","How are you today?","Wie geht es dir heute?","is"],
+ ["wh","Who is that girl?","Wer ist das Mädchen dort?","are"],
+ ["wh","When is your birthday?","Wann hast du Geburtstag?","are"],
+ ["wh","Where are my books?","Wo sind meine Bücher?","is"],
+ ["wh","How old is your brother?","Wie alt ist dein Bruder?","are"],
+ ["wh","What is your favourite colour?","Was ist deine Lieblingsfarbe?","are"],
+ ["wh","Who are your friends?","Wer sind deine Freunde?","is"],
+];
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+let actx = null;
+function beep(ok){ try{ actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.type = ok ? "triangle" : "square";
+  o.frequency.setValueAtTime(ok ? 660 : 180, actx.currentTime); if (ok) o.frequency.linearRampToValueAtTime(990, actx.currentTime + .15);
+  g.gain.setValueAtTime(.12, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .3); o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + .32);}catch(e){} }
+const cfg = { type: "mix", level: 1, de: 1, rounds: 12, time: 40 };
+document.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(`.chip[data-g="${b.dataset.g}"]`).forEach(x => x.setAttribute("aria-pressed", "false"));
+  b.setAttribute("aria-pressed", "true"); cfg[b.dataset.g] = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v; }));
+try{ const s = JSON.parse(localStorage.getItem("qbuilder") || "null"); if (s){ $("#nameA").value = s.a || $("#nameA").value; $("#nameB").value = s.b || $("#nameB").value; } }catch(e){}
+const sides = {};
+for (const k of ["A", "B"]) sides[k] = { k, line: $("#line" + k), pool: $("#pool" + k), de: $("#de" + k), st: $("#st" + k), pop: $("#pop" + k), timer: $("#timer" + k), scoreEl: $("#score" + k) };
+let deck = [], round = 0, running = false, cur = null, tmr = 0, nextT = 0;
+function startGame(){
+  const a = $("#nameA").value.trim() || "Team A", b = $("#nameB").value.trim() || "Team B";
+  try{ localStorage.setItem("qbuilder", JSON.stringify({ a, b })); }catch(e){}
+  $("#teamAName").textContent = a; $("#teamBName").textContent = b; sides.A.name = a; sides.B.name = b;
+  for (const S of Object.values(sides)){ S.score = 0; S.right = 0; S.wrong = 0; S.scoreEl.textContent = "0"; }
+  deck = shuffle(BANK.filter(q => cfg.type === "mix" || q[0] === cfg.type)); round = 0;
+  $("#startOv").hidden = true; $("#endOv").hidden = true; running = true; nextRound();
+}
+function nextRound(){
+  clearTimeout(nextT); round++;
+  if (round > cfg.rounds || !deck.length) return endGame();
+  const q = deck.pop();
+  $("#roundInfo").textContent = `Round ${round} / ${Math.min(cfg.rounds, round + deck.length)}`;
+  const words = q[1].split(" "); const tiles = words.slice(); if (cfg.level === 2) tiles.push(q[3]);
+  cur = { q, words, t0: performance.now() };
+  for (const S of Object.values(sides)){
+    S.done = false; S.de.textContent = cfg.de ? q[2] : ""; S.st.textContent = ""; S.line.className = "line"; S.line.innerHTML = ""; S.pool.innerHTML = "";
+    S.need = words.length;
+    shuffle(tiles.slice()).forEach(w => { const b = document.createElement("button"); b.type = "button"; b.className = "w"; b.textContent = w;
+      b.addEventListener("click", () => tap(S, b)); S.pool.appendChild(b); });
+  }
+  tick();
+}
+function tap(S, b){
+  if (!running || S.done) return;
+  if (b.parentElement === S.pool){ S.line.appendChild(b); if (S.line.children.length === S.need) check(S); }
+  else { S.pool.appendChild(b); S.line.classList.remove("bad"); }
+}
+function check(S){
+  const built = [...S.line.children].map(x => x.textContent).join(" ");
+  if (built === cur.q[1]){
+    const left = Math.max(0, 1 - (performance.now() - cur.t0) / (cfg.time * 1000)); const pts = 100 + Math.round(100 * left);
+    S.score += pts; S.right++; S.done = true; S.line.classList.add("ok"); S.st.textContent = "Great! ✓"; pop(S, "+" + pts, "var(--good)"); beep(true);
+    S.pool.querySelectorAll(".w").forEach(x => x.style.opacity = .3);
+  } else {
+    S.score -= 20; S.wrong++; S.line.classList.remove("bad"); void S.line.offsetWidth; S.line.classList.add("bad"); S.st.textContent = "Not quite – try again!"; pop(S, "−20", "var(--bad)"); beep(false);
+    setTimeout(() => { if (!S.done){ [...S.line.children].forEach(x => S.pool.appendChild(x)); S.line.classList.remove("bad"); } }, 650);
+  }
+  S.scoreEl.textContent = S.score;
+  if (sides.A.done && sides.B.done) nextT = setTimeout(nextRound, 1600);
+}
+function pop(S, t, c){ S.pop.textContent = t; S.pop.style.color = c; S.pop.classList.remove("show"); void S.pop.offsetWidth; S.pop.classList.add("show"); setTimeout(() => S.pop.classList.remove("show"), 700); }
+function tick(){
+  cancelAnimationFrame(tmr);
+  const loop = () => {
+    if (!running) return;
+    const f = Math.max(0, 1 - (performance.now() - cur.t0) / (cfg.time * 1000));
+    for (const S of Object.values(sides)) if (!S.done) S.timer.style.transform = `scaleX(${f})`;
+    if (f <= 0){
+      for (const S of Object.values(sides)) if (!S.done){ S.done = true; S.st.innerHTML = `Time's up! <span class="sol">${cur.q[1]}</span>`; }
+      nextT = setTimeout(nextRound, 2600); return;
+    }
+    if (sides.A.done && sides.B.done) return;
+    tmr = requestAnimationFrame(loop);
+  };
+  tmr = requestAnimationFrame(loop);
+}
+function endGame(){
+  running = false; cancelAnimationFrame(tmr); clearTimeout(nextT);
+  const A = sides.A, B = sides.B;
+  $("#fNameA").textContent = A.name; $("#fNameB").textContent = B.name; $("#fScoreA").textContent = A.score; $("#fScoreB").textContent = B.score;
+  $("#fStatA").textContent = `${A.right} right · ${A.wrong} wrong tries`; $("#fStatB").textContent = `${B.right} right · ${B.wrong} wrong tries`;
+  $("#winner").textContent = A.score === B.score ? "It's a draw!" : `${A.score > B.score ? A.name : B.name} wins! 🏆`;
+  $("#roundInfo").textContent = "Game over"; $("#endOv").hidden = false;
+}
+$("#startBtn").addEventListener("click", () => { beep(true); startGame(); });
+$("#againBtn").addEventListener("click", startGame);
+$("#settingsBtn").addEventListener("click", () => { $("#endOv").hidden = true; $("#startOv").hidden = false; });
+$("#menuBtn").addEventListener("click", () => { running = false; cancelAnimationFrame(tmr); clearTimeout(nextT); $("#endOv").hidden = true; $("#startOv").hidden = false; });
+$("#fsBtn").addEventListener("click", () => { try{ (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}); }catch(e){} });
+})();
+</script>
+
+</body>
+</html>
