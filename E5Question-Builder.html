@@ -169,6 +169,49 @@ const BANK = [
  ["wh","How old is your brother?","Wie alt ist dein Bruder?","are"],
  ["wh","What is your favourite colour?","Was ist deine Lieblingsfarbe?","are"],
  ["wh","Who are your friends?","Wer sind deine Freunde?","is"],
+,
+ ["yn","Is your mum at home?","Ist deine Mama zu Hause?","are"],
+ ["yn","Are you hungry?","Hast du Hunger?","Is"],
+ ["yn","Is the window open?","Ist das Fenster offen?","Are"],
+ ["yn","Are they in the park?","Sind sie im Park?","Is"],
+ ["yn","Is it cold today?","Ist es heute kalt?","Are"],
+ ["yn","Is your bag red?","Ist deine Tasche rot?","Are"],
+ ["yn","Are you in class 5a?","Bist du in der Klasse 5a?","Is"],
+ ["yn","Is Mia your friend?","Ist Mia deine Freundin?","Are"],
+ ["yn","Are the pens in my bag?","Sind die Stifte in meiner Tasche?","Is"],
+ ["yn","Is your brother at school?","Ist dein Bruder in der Schule?","Are"],
+ ["yn","Am I right?","Habe ich recht?","Is"],
+ ["yn","Are you tired?","Bist du müde?","Is"],
+ ["yn","Is the teacher in the classroom?","Ist die Lehrerin im Klassenzimmer?","Are"],
+ ["yn","Are your parents nice?","Sind deine Eltern nett?","Is"],
+ ["yn","Is the dog in the kitchen?","Ist der Hund in der Küche?","Are"],
+ ["yn","Is London in England?","Liegt London in England?","Are"],
+ ["yn","Are we late?","Sind wir zu spät?","Is"],
+ ["yn","Is your cat white?","Ist deine Katze weiß?","Are"],
+ ["yn","Is she your sister?","Ist sie deine Schwester?","Are"],
+ ["yn","Are you OK?","Geht es dir gut?","Is"],
+ ["yn","Is your English book in your bag?","Ist dein Englischbuch in deiner Tasche?","Are"],
+ ["wh","Where is your school?","Wo ist deine Schule?","are"],
+ ["wh","How old is your sister?","Wie alt ist deine Schwester?","are"],
+ ["wh","Who is your English teacher?","Wer ist dein Englischlehrer / deine Englischlehrerin?","are"],
+ ["wh","Where are your parents?","Wo sind deine Eltern?","is"],
+ ["wh","What colour are your shoes?","Welche Farbe haben deine Schuhe?","is"],
+ ["wh","Where is the cat?","Wo ist die Katze?","are"],
+ ["wh","Who is that boy?","Wer ist der Junge dort?","are"],
+ ["wh","What is your favourite animal?","Was ist dein Lieblingstier?","are"],
+ ["wh","How are your grandparents?","Wie geht es deinen Großeltern?","is"],
+ ["wh","Where is your bag?","Wo ist deine Tasche?","are"],
+ ["wh","When is the party?","Wann ist die Party?","are"],
+ ["wh","What is your phone number?","Wie ist deine Telefonnummer?","are"],
+ ["wh","Who are those girls?","Wer sind die Mädchen dort?","is"],
+ ["wh","How old are your friends?","Wie alt sind deine Freunde?","is"],
+ ["wh","Where is the toilet?","Wo ist die Toilette?","are"],
+ ["wh","What is your favourite subject?","Was ist dein Lieblingsfach?","are"],
+ ["wh","Why are you sad?","Warum bist du traurig?","is"],
+ ["wh","Why is he angry?","Warum ist er wütend?","are"],
+ ["wh","Where are we?","Wo sind wir?","is"],
+ ["wh","What time is it?","Wie spät ist es?","are"],
+ ["wh","Who is your favourite star?","Wer ist dein Lieblingsstar?","are"],
 ];
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 let actx = null;
@@ -188,13 +231,19 @@ function startGame(){
   try{ localStorage.setItem("qbuilder", JSON.stringify({ a, b })); }catch(e){}
   $("#teamAName").textContent = a; $("#teamBName").textContent = b; sides.A.name = a; sides.B.name = b;
   for (const S of Object.values(sides)){ S.score = 0; S.right = 0; S.wrong = 0; S.scoreEl.textContent = "0"; }
-  deck = shuffle(BANK.filter(q => cfg.type === "mix" || q[0] === cfg.type)); round = 0;
+  const pool = BANK.filter(q => cfg.type === "mix" || q[0] === cfg.type);
+  let seen = []; try{ seen = JSON.parse(localStorage.getItem("qbuilder-seen") || "[]"); }catch(e){}
+  const fresh = shuffle(pool.filter(q => !seen.includes(q[1]))), old = shuffle(pool.filter(q => seen.includes(q[1])));
+  deck = old.concat(fresh); // deck.pop() takes from the end: unplayed questions come first
+  if (fresh.length < cfg.rounds) { try{ localStorage.setItem("qbuilder-seen", "[]"); }catch(e){} }
+  round = 0;
   $("#startOv").hidden = true; $("#endOv").hidden = true; running = true; nextRound();
 }
 function nextRound(){
   clearTimeout(nextT); round++;
   if (round > cfg.rounds || !deck.length) return endGame();
   const q = deck.pop();
+  try{ const sn = JSON.parse(localStorage.getItem("qbuilder-seen") || "[]"); if (!sn.includes(q[1])) sn.push(q[1]); localStorage.setItem("qbuilder-seen", JSON.stringify(sn)); }catch(e){}
   $("#roundInfo").textContent = `Round ${round} / ${Math.min(cfg.rounds, round + deck.length)}`;
   const words = q[1].split(" "); const tiles = words.slice(); if (cfg.level === 2) tiles.push(q[3]);
   cur = { q, words, t0: performance.now() };
