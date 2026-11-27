@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Possessive Memory</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap">
+<style>
+/* Layout: player bar on top, card grid filling the rest of an iPad screen. Single bright classroom look. */
+:root{--bg:#F3EFE6;--ink:#1F2A44;--muted:#6B7385;--card:#FFFFFF;--line:#D8D2C4;--good:#2E9D5B;--bad:#D63A3A;
+  --p1:#2F7DE1;--p2:#F0592A;--p3:#2E9D5B;--back1:#7B5EA7;--back2:#9A7DC6;
+  --display:"Fredoka","Trebuchet MS",system-ui,sans-serif;--body:"Nunito","Segoe UI",system-ui,sans-serif;color-scheme:light}
+html,body{height:100%;margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.app{height:100%;display:flex;flex-direction:column;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box;gap:8px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:clamp(18px,2.4vw,28px);margin-right:auto}
+.players{display:flex;gap:8px;flex-wrap:wrap}
+.pl{display:flex;align-items:center;gap:8px;background:var(--card);border:3px solid var(--line);border-radius:999px;padding:4px 14px 4px 6px;font-family:var(--display);font-weight:600;font-size:clamp(14px,1.8vw,20px);transition:transform .2s}
+.pl .dot{width:26px;height:26px;border-radius:50%}
+.pl b{font-size:1.3em;font-variant-numeric:tabular-nums;margin-left:4px}
+.pl.turn{transform:scale(1.08);box-shadow:0 4px 0 var(--ink)}
+.iconbtn{font:700 14px var(--body);border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer}
+.msg{text-align:center;font-family:var(--display);font-weight:600;font-size:clamp(16px,2vw,24px);min-height:1.3em}
+.grid{flex:1;min-height:0;display:grid;gap:clamp(6px,1vw,12px);grid-template-columns:repeat(var(--cols),1fr);grid-auto-rows:1fr}
+.c{position:relative;perspective:900px;cursor:pointer;min-width:0;min-height:0}
+.in{position:absolute;inset:0;transition:transform .45s;transform-style:preserve-3d}
+.c.up .in{transform:rotateY(180deg)}
+.f{position:absolute;inset:0;border-radius:16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;border:3px solid var(--ink);box-sizing:border-box}
+.back{background:repeating-linear-gradient(45deg,var(--back1) 0 14px,var(--back2) 14px 28px);box-shadow:0 4px 0 var(--ink)}
+.back::after{content:"?";font-family:var(--display);font-weight:700;font-size:clamp(26px,4vw,52px);color:#fff;opacity:.9}
+.front{background:var(--card);transform:rotateY(180deg);font-family:var(--display);font-weight:600;font-size:clamp(18px,3.2vw,46px);text-align:center;padding:4px;line-height:1.05}
+.front.small{font-size:clamp(14px,2.1vw,30px)}
+.c.done .front{border-color:var(--owner,var(--good));background:color-mix(in srgb,var(--owner,var(--good)) 14%,#fff)}
+.c.done{cursor:default}
+.c.wrong .front{border-color:var(--bad);animation:shake .35s}
+@keyframes shake{0%,100%{margin-left:0}25%{margin-left:-6px}75%{margin-left:6px}}
+.overlay{position:fixed;inset:0;background:rgba(31,42,68,.55);display:flex;align-items:center;justify-content:center;z-index:20;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.panel{background:var(--card);border-radius:24px;max-width:640px;width:100%;padding:24px clamp(18px,3vw,34px);box-shadow:0 10px 0 rgba(0,0,0,.15);max-height:92vh;overflow:auto;box-sizing:border-box}
+.panel h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,5vw,46px);margin:0 0 4px}
+.panel p{color:var(--muted);margin:4px 0 12px;line-height:1.45}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+.lab{font-weight:800;min-width:110px}
+.chip{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:8px 14px;font:700 15px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.names{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.names input{font:700 16px var(--body);padding:10px;border-radius:12px;border:2px solid var(--line);min-width:0}
+.btn{font-family:var(--display);font-weight:700;font-size:24px;border:none;border-radius:18px;padding:14px 28px;background:var(--ink);color:#fff;cursor:pointer;box-shadow:0 5px 0 #0c1326}
+.res{display:grid;gap:8px;margin:14px 0}
+.res div{display:flex;justify-content:space-between;border-radius:14px;padding:10px 16px;font-family:var(--display);font-size:22px;font-weight:600}
+button:focus-visible,.c:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.in{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top"><div class="brand">🧠 Possessive Memory</div><div class="players" id="players"></div>
+    <button class="iconbtn" id="menuBtn" type="button">Menü</button></div>
+  <div class="msg" id="msg">Find the pairs: I – my, Tom – his …</div>
+  <div class="grid" id="grid"></div>
+</div>
+<div class="overlay" id="startOv"><div class="panel">
+  <h1>Possessive Memory</h1>
+  <p>Turn over two cards. If they belong together (I – my, Tom – his), you get a point and play again. If not, it's the next player's turn.</p>
+  <div class="row"><span class="lab">Players</span>
+    <button class="chip" data-g="n" data-v="2" type="button" aria-pressed="true">2</button>
+    <button class="chip" data-g="n" data-v="3" type="button">3</button></div>
+  <div class="row"><div class="names"><input id="n1" value="Player 1" maxlength="14" aria-label="Spieler 1"><input id="n2" value="Player 2" maxlength="14" aria-label="Spieler 2"><input id="n3" value="Player 3" maxlength="14" aria-label="Spieler 3"></div></div>
+  <div class="row"><span class="lab">Cards</span>
+    <button class="chip" data-g="lvl" data-v="1" type="button">14 · I – my …</button>
+    <button class="chip" data-g="lvl" data-v="2" type="button" aria-pressed="true">24 · + names</button></div>
+  <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="startBtn" type="button">Start ▶</button></div>
+</div></div>
+<div class="overlay" id="endOv" hidden><div class="panel" style="text-align:center">
+  <h1 id="winner">Well done!</h1><div class="res" id="res"></div>
+  <div class="row" style="justify-content:center"><button class="btn" id="againBtn" type="button">Play again</button><button class="iconbtn" id="setBtn" type="button">Einstellungen</button></div>
+</div></div>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const BASE = [["I","my"],["you","your"],["he","his"],["she","her"],["it","its"],["we","our"],["they","their"]];
+const NAMES = [["Tom","his"],["Anna","her"],["Lisa and Sarah","their"],["Mum and I","our"],["the cat","its"]];
+const COLS = ["var(--p1)","var(--p2)","var(--p3)"];
+const cfg = { n: 2, lvl: 2 };
+document.querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(`.chip[data-g="${b.dataset.g}"]`).forEach(x => x.setAttribute("aria-pressed", "false"));
+  b.setAttribute("aria-pressed", "true"); cfg[b.dataset.g] = +b.dataset.v; $("#n3").hidden = cfg.n < 3; }));
+$("#n3").hidden = true;
+let players = [], cur = 0, open = [], lock = false, left = 0;
+let actx = null;
+function beep(ok){ try{ actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain();
+  o.type = ok ? "triangle" : "sine"; o.frequency.setValueAtTime(ok ? 660 : 220, actx.currentTime); if (ok) o.frequency.linearRampToValueAtTime(990, actx.currentTime + .15);
+  g.gain.setValueAtTime(.1, actx.currentTime); g.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .3); o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + .32);}catch(e){} }
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function renderPlayers(){
+  $("#players").innerHTML = players.map((p, i) => `<div class="pl${i === cur ? " turn" : ""}" style="border-color:${i === cur ? COLS[i] : "var(--line)"}"><span class="dot" style="background:${COLS[i]}"></span>${p.name}<b>${p.score}</b></div>`).join("");
+}
+function start(){
+  players = []; for (let i = 1; i <= cfg.n; i++) players.push({ name: ($("#n" + i).value.trim() || "Player " + i), score: 0 });
+  try{ localStorage.setItem("possmem", JSON.stringify([1,2,3].map(i => $("#n" + i).value))); }catch(e){}
+  const pairs = cfg.lvl === 2 ? BASE.concat(NAMES) : BASE;
+  const cards = [];
+  pairs.forEach(([s, p]) => { cards.push({ t: s, key: p, kind: "s" }); cards.push({ t: p, key: p, kind: "p" }); });
+  shuffle(cards); left = pairs.length;
+  const grid = $("#grid"); grid.innerHTML = "";
+  const cols = cards.length > 14 ? 6 : 7; grid.style.setProperty("--cols", window.innerWidth < window.innerHeight ? (cards.length > 14 ? 4 : 4) : cols);
+  cards.forEach((c, i) => {
+    const el = document.createElement("div"); el.className = "c"; el.tabIndex = 0; el.setAttribute("role", "button"); el.setAttribute("aria-label", "card " + (i + 1));
+    el.innerHTML = `<div class="in"><div class="f back"></div><div class="f front${c.t.length > 6 ? " small" : ""}">${c.t}</div></div>`;
+    el.addEventListener("click", () => flip(el, c)); el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") flip(el, c); });
+    c.el = el; grid.appendChild(el);
+  });
+  cur = 0; open = []; lock = false; renderPlayers(); say(`${players[0].name}, it's your turn!`);
+  $("#startOv").hidden = true; $("#endOv").hidden = true;
+}
+function say(t){ $("#msg").textContent = t; }
+function flip(el, c){
+  if (lock || el.classList.contains("up") || el.classList.contains("done")) return;
+  el.classList.add("up"); open.push(c);
+  if (open.length < 2) return;
+  lock = true; const [a, b] = open;
+  const ok = a.key === b.key && a.kind !== b.kind;
+  setTimeout(() => {
+    if (ok){
+      [a, b].forEach(x => { x.el.classList.add("done"); x.el.style.setProperty("--owner", COLS[cur]); });
+      players[cur].score++; left--; beep(true); say(`Yes! ${a.kind === "s" ? a.t : b.t} – ${a.kind === "p" ? a.t : b.t}. ${players[cur].name}, play again!`);
+      open = []; lock = false; renderPlayers();
+      if (left === 0) setTimeout(end, 900);
+    } else {
+      [a, b].forEach(x => x.el.classList.add("wrong")); beep(false);
+      setTimeout(() => {
+        [a, b].forEach(x => x.el.classList.remove("up", "wrong"));
+        open = []; cur = (cur + 1) % players.length; lock = false; renderPlayers(); say(`${players[cur].name}, it's your turn!`);
+      }, 1100);
+    }
+  }, 500);
+}
+function end(){
+  const best = Math.max(...players.map(p => p.score)); const win = players.filter(p => p.score === best);
+  $("#winner").textContent = win.length > 1 ? "It's a draw!" : `${win[0].name} wins! 🏆`;
+  $("#res").innerHTML = players.slice().sort((x, y) => y.score - x.score).map(p => { const i = players.indexOf(p);
+    return `<div style="background:color-mix(in srgb,${COLS[i]} 15%,#fff)"><span>${p.name}</span><span>${p.score} pairs</span></div>`; }).join("");
+  $("#endOv").hidden = false;
+}
+try{ const s = JSON.parse(localStorage.getItem("possmem") || "null"); if (s) [1,2,3].forEach((i, k) => { if (s[k]) $("#n" + i).value = s[k]; }); }catch(e){}
+$("#startBtn").addEventListener("click", () => { beep(true); start(); });
+$("#againBtn").addEventListener("click", start);
+$("#setBtn").addEventListener("click", () => { $("#endOv").hidden = true; $("#startOv").hidden = false; });
+$("#menuBtn").addEventListener("click", () => { $("#startOv").hidden = false; });
+window.addEventListener("resize", () => { const g = $("#grid"); const n = g.children.length; if (!n) return;
+  g.style.setProperty("--cols", window.innerWidth < window.innerHeight ? 4 : (n > 14 ? 6 : 7)); });
+})();
+</script>
+
+</body>
+</html>
